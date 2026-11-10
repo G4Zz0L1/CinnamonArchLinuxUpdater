@@ -11,6 +11,14 @@ const Settings = imports.ui.settings;
 const Util = imports.misc.util;
 const Mainloop = imports.mainloop;
 
+// GLib 2.80 moved Gio.UnixInputStream into GioUnix; older systems only have the Gio name.
+let UnixInputStream;
+try {
+    UnixInputStream = imports.gi.GioUnix.InputStream;
+} catch (e) {
+    UnixInputStream = Gio.UnixInputStream;
+}
+
 const AUState = {
     Start:          0,
     Checking:       1,
@@ -76,7 +84,6 @@ MyApplet.prototype = {
             this.menu.addMenuItem(this._CheckNowItem);
 
             this._contentSection = new PopupMenu.PopupMenuSection();
-            this._contentSection.actor.add_actor(this._CheckNowItem.actor);
             this.menu.addMenuItem(this._contentSection);
 
             let item = new PopupMenu.PopupIconMenuItem(_("Update now"), "arch-uptodate-symbolic", St.IconType.SYMBOLIC);
@@ -92,7 +99,6 @@ MyApplet.prototype = {
             this.settings = new Settings.AppletSettings(this, "arch-updater@p3fff.de", instanceId);
             this.settings.bindProperty(Settings.BindingDirection.IN, "boot-wait", "pref_bootwait", null, null);
             this.settings.bindProperty(Settings.BindingDirection.IN, "check-interval", "pref_checkinterval", this.on_settings_changed, null);
-            this.settings.bindProperty(Settings.BindingDirection.IN, "always-visible", "pref_alwaysvisible", null, null);
             this.settings.bindProperty(Settings.BindingDirection.IN, "strip-versions", "pref_stripversions", null, null);
             this.settings.bindProperty(Settings.BindingDirection.IN, "check-cmd", "pref_checkcmd", null, null);
             this.settings.bindProperty(Settings.BindingDirection.IN, "update-cmd", "pref_updatecmd", null, null);
@@ -229,7 +235,7 @@ MyApplet.prototype = {
                         // Let's buffer the command's output - that's a input for us !
                         this.res = res;
                         this._updateProcess_stream = new Gio.DataInputStream({
-                                base_stream: new Gio.UnixInputStream({fd: out_fd})
+                                base_stream: new UnixInputStream({fd: out_fd})
                         });
 //                        global.logError("_checkUpdates 2");
 
